@@ -1,0 +1,9 @@
+pytest
+pytest-cov
+coverage
+
+ruff
+black
+isort
+
+pre-commit

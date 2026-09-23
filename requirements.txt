@@ -1,0 +1,10 @@
+crewai
+crewai-tools
+langchain-google-genai
+rapidfuzz
+requests
+numpy
+pandas
+playwright
+streamlit
+python-dotenv

@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+
+# Coverage
+.coverage
+htmlcov/
+coverage.xml
+
+# Pytest
+.pytest_cache/
+
+# Ruff
+.ruff_cache/
+
+# Environment
+.env
+
+# Databases
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated reports
+reports/
+
+# Ruff reports
+ruff_report*.txt
+
+# Coverage
+htmlcov/
+coverage.xml
+.coverage

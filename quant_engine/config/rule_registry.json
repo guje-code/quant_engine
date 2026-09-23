@@ -1,0 +1,558 @@
+{
+  "RULES": {
+    "RVC": {
+      "version": "1.0",
+      "priority": 0,
+      "leagues": ["GENERIC_SPORTS"],
+      "name": "Result Validation Check",
+      "category": "DATA_INTEGRITY",
+      "severity": "CRITICAL",
+      "weight": 0.0,
+      "eval_type": "SIMPLE",
+      "metric": "event_id_mismatch",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "RESULT VALIDATION CHECK (RVC): Si Event_ID no coincide con Match_ID del resultado, rechazar el registro.",
+      "risk_rule": "Si RVC o DATA_MISMATCH está activo, RECHAZAR la apuesta automáticamente."
+    },
+    "OSV": {
+      "version": "1.0",
+      "priority": 0,
+      "leagues": ["GENERIC_SPORTS"],
+      "name": "Outlier Score Validation",
+      "category": "DATA_INTEGRITY",
+      "severity": "CRITICAL",
+      "weight": -0.20,
+      "eval_type": "SIMPLE",
+      "metric": "score_outlier_std_dev",
+      "operator": ">=",
+      "threshold": 3.0,
+      "prompt_description": "OUTLIER SCORE VALIDATION (OSV): Si el marcador/métrica supera 3σ respecto a la media, requerir revisión manual.",
+      "risk_rule": "Requerir validación manual y rechazar ejecución automática si OSV >= 3σ."
+    },
+    "WEF": {
+      "version": "1.1",
+      "priority": 0,
+      "leagues": ["MLB", "LIGA_MX", "FOOTBALL_TOP_EUROPE", "NFL"],
+      "name": "Weather Event Filter",
+      "category": "ENVIRONMENT",
+      "severity": "HIGH",
+      "weight": -0.15,
+      "eval_type": "SIMPLE",
+      "metric": "rain_probability_pct",
+      "operator": ">=",
+      "threshold": 60.0,
+      "prompt_description": "WEATHER EVENT FILTER (WEF): Si estadio abierto presenta probabilidad de lluvia >= 60%, activar bandera WEATHER_RISK.",
+      "risk_rule": "Bloquear apuestas automáticas en mercados de Totales si WEATHER_RISK está activo."
+    },
+    "DRD": {
+      "version": "1.0",
+      "priority": 0,
+      "leagues": ["GENERIC_SPORTS"],
+      "name": "Duplicate Record Detection",
+      "category": "DATA_INTEGRITY",
+      "severity": "CRITICAL",
+      "weight": 0.0,
+      "eval_type": "SIMPLE",
+      "metric": "duplicate_event_detected",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "DUPLICATE RECORD DETECTION (DRD): Registro duplicado detectado.",
+      "risk_rule": "Excluir registros DRD automáticamente."
+    },
+    "CLV": {
+      "version": "2.0",
+      "priority": 1,
+      "leagues": ["MLB", "FOOTBALL_TOP_EUROPE", "LIGA_MX", "LIGA_MX_FEMENIL", "FOOTBALL_COPAS", "FOOTBALL_LIGAS_DESARROLLO", "NFL", "NBA", "WNBA", "NPB", "KBO", "LMB", "TENIS_WTA", "TENIS_ATP", "TENIS_DAVIS_TEAM", "GENERIC_SPORTS"],
+      "name": "Closing Line Value",
+      "category": "MARKET",
+      "severity": "CRITICAL",
+      "weight": -0.05,
+      "internal_engine": true,
+      "fallback_flag": "clv_drop_detected",
+      "prompt_description": "CLOSING LINE VALUE (CLV): Si la línea de cierre sufre caída adversa > 3%, penalizar -0.05.",
+      "risk_rule": "Si LINE MOVEMENT CLV está activo (caída de línea > 3% en contra), reducir stake en un 25%."
+    },
+    "FMS": {
+      "version": "2.0",
+      "priority": 1,
+      "leagues": ["FOOTBALL_TOP_EUROPE"],
+      "name": "Market Steam Move",
+      "category": "MARKET",
+      "severity": "MEDIUM",
+      "weight": 0.08,
+      "internal_engine": true,
+      "fallback_flag": "steam_move_detected",
+      "prompt_description": "MARKET STEAM MOVE (FMS): Movimiento acelerado a favor de la selección (+0.08).",
+      "risk_rule": "Si FMS registra movimiento masivo a favor del rival (Steam Move en contra > 5%), reducir stake al 50% o recalcular EV."
+    },
+    "CXI": {
+      "version": "1.0",
+      "priority": 1,
+      "leagues": ["LIGA_MX", "FOOTBALL_TOP_EUROPE", "FOOTBALL_COPAS"],
+      "name": "Confirmed Lineups Impact",
+      "category": "INJURY",
+      "severity": "CRITICAL",
+      "weight": -0.10,
+      "eval_type": "OR",
+      "conditions": [
+        {"metric": "confirmed_injuries_count", "operator": ">=", "threshold": 2},
+        {"metric": "confirmed_lineup_issues", "operator": "==", "threshold": true}
+      ],
+      "prompt_description": "CONFIRMED LINEUPS (CXI): Si presenta ≥2 bajas confirmadas en posiciones críticas, penalizar Win Prob en -0.10.",
+      "risk_rule": "Si CONFIRMED LINEUPS (CXI) está activo con ≥2 bajas clave, prohibir Moneyline < 1.60 y migrar a Doble Oportunidad o Hándicap Asiático."
+    },
+    "BFI": {
+      "version": "1.2",
+      "priority": 1,
+      "leagues": ["MLB", "NPB"],
+      "name": "Bullpen Fatigue Index",
+      "category": "RISK",
+      "severity": "HIGH",
+      "weight": -0.08,
+      "eval_type": "OR",
+      "conditions": [
+        {"metric": "bullpen_fatigue_index", "operator": ">=", "threshold": 0.60},
+        {"metric": "bullpen_fatigue", "operator": "==", "threshold": true}
+      ],
+      "prompt_description": "BULLPEN FATIGUE INDEX (BFI): Si relevistas acumulan alta fatiga / BFI >= 0.60, penalizar Win Prob en -0.08.",
+      "risk_rule": "Vetar ML < 1.70 cuando BFI y HLF estén activos simultáneamente."
+    },
+    "HLF": {
+      "version": "1.0",
+      "priority": 1,
+      "leagues": ["MLB"],
+      "name": "High Leverage Fatigue",
+      "category": "RISK",
+      "severity": "HIGH",
+      "weight": -0.08,
+      "eval_type": "SIMPLE",
+      "metric": "high_leverage_fatigue",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "HIGH LEVERAGE FATIGUE (HLF): Si Bullpen Leverage Index > 1.20 y xFIP bullpen > 4.20 L7d, penalizar Win Prob en -0.08.",
+      "risk_rule": "Vetar ML < 1.70 cuando BFI y HLF estén activos simultáneamente."
+    },
+    "BCA": {
+      "version": "1.1",
+      "priority": 1,
+      "leagues": ["MLB"],
+      "name": "Bullpen Collapse Alert",
+      "category": "RISK",
+      "severity": "HIGH",
+      "weight": -0.12,
+      "eval_type": "AND",
+      "conditions": [
+        {"metric": "bullpen_era_l10", "operator": ">=", "threshold": 4.50},
+        {"metric": "bullpen_whip", "operator": ">=", "threshold": 1.35}
+      ],
+      "prompt_description": "BULLPEN COLLAPSE ALERT (BCA): Si Bullpen ERA L10 >= 4.50 y WHIP >= 1.35, reducir confianza Moneyline en -0.12."
+    },
+    "GBM": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["MLB", "KBO"],
+      "name": "Ground Ball Mismatch",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": -0.12,
+      "eval_type": "SIMPLE",
+      "metric": "ground_ball_mismatch",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "GROUND BALL MISMATCH (GBM): Si abridor rival tiene GB% alto y ofensiva es ineficiente vs rodadores, penalizar -0.12.",
+      "risk_rule": "Bloquear Moneyline si GBM y SV se activan al mismo tiempo."
+    },
+    "SV": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["MLB"],
+      "name": "Split Vulnerability",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": -0.12,
+      "eval_type": "SIMPLE",
+      "metric": "split_vulnerability",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "SPLIT VULNERABILITY (SV): Si abridor tiene WHIP > 1.35 frente al perfil del lineup rival, reducir Win Prob -0.12.",
+      "risk_rule": "Bloquear Moneyline si GBM y SV se activan al mismo tiempo."
+    },
+    "CVF": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["MLB"],
+      "name": "Coors Volatility Factor",
+      "category": "CONTEXTUAL",
+      "severity": "MEDIUM",
+      "weight": 0.12,
+      "eval_type": "AND",
+      "conditions": [
+        {"metric": "coors_field_game", "operator": "==", "threshold": true},
+        {"metric": "both_bullpens_era", "operator": ">=", "threshold": 4.20}
+      ],
+      "prompt_description": "COORS VOLATILITY FACTOR (CVF): En Coors Field con ambos bullpens fatigados/altos ERA (> 4.20), aplicar ajuste +0.12."
+    },
+    "UF": {
+      "version": "1.0",
+      "priority": 3,
+      "leagues": ["MLB"],
+      "name": "Umpire Factor",
+      "category": "CONTEXTUAL",
+      "severity": "LOW",
+      "weight": 0.05,
+      "eval_type": "OR",
+      "conditions": [
+        {"metric": "umpire_factor_favorable", "operator": "==", "threshold": true},
+        {"metric": "umpire_runs_added", "operator": ">=", "threshold": 0.40}
+      ],
+      "prompt_description": "UMPIRE FACTOR (UF): Si Umpire principal presenta tendencia favorable al mercado (+0.05)."
+    },
+    "ULGF": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["FOOTBALL_TOP_EUROPE", "FOOTBALL_COPAS"],
+      "name": "UEFA League Gap Factor",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": 0.12,
+      "eval_type": "SIMPLE",
+      "metric": "uefa_coeff_diff",
+      "operator": ">",
+      "threshold": 15.0,
+      "prompt_description": "UEFA LEAGUE GAP FACTOR (ULGF): Si diferencia de coeficiente UEFA > 15 posiciones, aumentar Win Prob visitante +0.12."
+    },
+    "ETF": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["FOOTBALL_TOP_EUROPE", "FOOTBALL_COPAS"],
+      "name": "European Travel Fatigue",
+      "category": "CONTEXTUAL",
+      "severity": "MEDIUM",
+      "weight": -0.15,
+      "eval_type": "OR",
+      "conditions": [
+        {"metric": "travel_distance_km", "operator": ">=", "threshold": 3000.0},
+        {"metric": "european_travel_fatigue", "operator": "==", "threshold": true}
+      ],
+      "prompt_description": "EUROPEAN TRAVEL FATIGUE (ETF): Si viaje > 3000 km, reducir xG / Win Prob visitante -0.15."
+    },
+    "GSC": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["FOOTBALL_TOP_EUROPE"],
+      "name": "Group Stage Conservatism",
+      "category": "CONTEXTUAL",
+      "severity": "MEDIUM",
+      "weight": -0.35,
+      "eval_type": "SIMPLE",
+      "metric": "uefa_group_stage_matchday",
+      "operator": "<=",
+      "threshold": 2,
+      "prompt_description": "GROUP STAGE CONSERVATISM (GSC): En Jornada 1-2 de fase de grupos/liga UEFA, reducir expectativas ofensivas -0.35."
+    },
+    "PMP": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["FOOTBALL_TOP_EUROPE", "NFL", "NBA", "WNBA", "GENERIC_SPORTS"],
+      "name": "Physical Matchup Penalty",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": -0.08,
+      "eval_type": "AND",
+      "conditions": [
+        {"metric": "fav_odds", "operator": "<", "threshold": 1.50},
+        {"metric": "rival_top5_def_rtg", "operator": "==", "threshold": true}
+      ],
+      "prompt_description": "PHYSICAL MATCHUP PENALTY (PMP): Si favorito < 1.50 y rival posee Top-5 Defensive Rating, reducir Win Prob favorita -0.08."
+    },
+    "SPP": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["FOOTBALL_TOP_EUROPE"],
+      "name": "Sterile Possession Penalty",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": -0.12,
+      "eval_type": "AND",
+      "conditions": [
+        {"metric": "possession_pct", "operator": ">", "threshold": 0.58},
+        {"metric": "xg_conversion", "operator": "<", "threshold": 0.12}
+      ],
+      "prompt_description": "STERILE POSSESSION PENALTY (SPP): Si posesión > 58% y conversión xG < 0.12, penalizar Win Prob -0.12."
+    },
+    "DBE": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["FOOTBALL_TOP_EUROPE"],
+      "name": "Defensive Block Efficiency",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": 0.10,
+      "eval_type": "AND",
+      "conditions": [
+        {"metric": "visitor_xga", "operator": "<", "threshold": 1.20},
+        {"metric": "facing_possession_fav", "operator": "==", "threshold": true}
+      ],
+      "prompt_description": "DEFENSIVE BLOCK EFFICIENCY (DBE): Si visitante concede < 1.2 xGA y enfrenta favorito de posesión, aplicar bono +0.10."
+    },
+    "MFT": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["LIGA_MX"],
+      "name": "Fragilidad Temprana Liga MX",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": -0.12,
+      "eval_type": "SIMPLE",
+      "metric": "early_fragility_active",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "FRAGILIDAD TEMPRANA LIGA MX (MFT): Si el favorito concede > 0.5 goles en min 0-20 L5d vs rival de contraataque, penalizar -0.12."
+    },
+    "MR-EJ": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["LIGA_MX"],
+      "name": "Transición Inversa Liga MX",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": -0.12,
+      "eval_type": "SIMPLE",
+      "metric": "reverse_transition_active",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "TRANSICIÓN INVERSA LIGA MX (MR-EJ): Si favorito concede xGA > 1.2 L5d vs rival con diferencial positivo en contraataque, penalizar -0.12."
+    },
+    "MEBB": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["LIGA_MX"],
+      "name": "Eficiencia vs Bloque Bajo Liga MX",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": -0.15,
+      "eval_type": "SIMPLE",
+      "metric": "low_block_inefficiency",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "EFICIENCIA VS BLOQUE BAJO LIGA MX (MEBB): Si visitante favorito promedia posesión > 58% con conversión xG < 0.12 L3d, penalizar -0.15."
+    },
+    "MCL": {
+      "version": "1.0",
+      "priority": 3,
+      "leagues": ["LIGA_MX"],
+      "name": "Derbis Regionales Liga MX",
+      "category": "CONTEXTUAL",
+      "severity": "LOW",
+      "weight": 0.12,
+      "eval_type": "SIMPLE",
+      "metric": "regional_derby_active",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "DERBIS REGIONALES LIGA MX (MCL): En Clásico Regio, Tapatío o alta rivalidad, aplicar ajuste positivo +0.12."
+    },
+    "MEV": {
+      "version": "1.0",
+      "priority": 3,
+      "leagues": ["LIGA_MX"],
+      "name": "Colapso en Climas Extremos",
+      "category": "ENVIRONMENT",
+      "severity": "LOW",
+      "weight": 0.12,
+      "eval_type": "SIMPLE",
+      "metric": "extreme_climate_collapse",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "COLAPSO EN CLIMAS EXTREMOS (MEV): Si visitante sufre colapso en plazas de humedad/calor (Cancún/Mérida), sumar +0.12 al local."
+    },
+    "MLMX-FEM": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["LIGA_MX_FEMENIL"],
+      "name": "Brecha de Plantilla Femenil",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": 0.18,
+      "eval_type": "SIMPLE",
+      "metric": "squad_gap_top4_vs_bottom",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "BRECHA DE PLANTILLA (MLMX-FEM): Top 4 vs equipos del fondo de tabla (13-18), aumentar prob. local +0.18."
+    },
+    "MFEM-BP": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["LIGA_MX_FEMENIL"],
+      "name": "Fragilidad Balón Parado",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": 0.20,
+      "eval_type": "SIMPLE",
+      "metric": "set_piece_vulnerability",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "FRAGILIDAD EN BALÓN PARADO (MFEM-BP): Si concede > 0.8 goles de balón parado L5d, aplicar bono de anotación +0.20."
+    },
+    "MFEM-ROT": {
+      "version": "1.0",
+      "priority": 1,
+      "leagues": ["LIGA_MX_FEMENIL"],
+      "name": "Rotación de Porteras/Zaga",
+      "category": "INJURY",
+      "severity": "HIGH",
+      "weight": -0.10,
+      "eval_type": "SIMPLE",
+      "metric": "goalkeeper_cb_dnp",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "ROTACIÓN DE PORTERAS / ZAGA (MFEM-ROT): Portera titular o central capitana baja (DNP), penalizar -0.10."
+    },
+    "MBTM": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["FOOTBALL_LIGAS_DESARROLLO"],
+      "name": "Filiales / B-Teams",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": -0.12,
+      "eval_type": "SIMPLE",
+      "metric": "b_team_away_vs_relegation",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "FILIALES / B-TEAMS (MBTM): Si visitante es Filial vs rival en descenso L8, penalizar Win Prob -0.12."
+    },
+    "QBI": {
+      "version": "1.0",
+      "priority": 1,
+      "leagues": ["NFL"],
+      "name": "QB Status Impact",
+      "category": "INJURY",
+      "severity": "CRITICAL",
+      "weight": -0.12,
+      "eval_type": "OR",
+      "conditions": [
+        {"metric": "backup_qb", "operator": "==", "threshold": true},
+        {"metric": "rookie_qb_first_start", "operator": "==", "threshold": true}
+      ],
+      "prompt_description": "QB STATUS IMPACT (QBI): Si juega QB suplente o novato debutante, penalizar Win Prob -0.12."
+    },
+    "MNFL-W": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["NFL"],
+      "name": "Regla Clima NFL",
+      "category": "ENVIRONMENT",
+      "severity": "HIGH",
+      "weight": -0.15,
+      "eval_type": "SIMPLE",
+      "metric": "wind_speed_mph",
+      "operator": ">=",
+      "threshold": 15.0,
+      "prompt_description": "REGLA CLIMA (MNFL-W): Viento >= 15 mph reduce probabilidades ofensivas en -0.15."
+    },
+    "MNFL-OL": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["NFL"],
+      "name": "OL vs Pass Rush NFL",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": -0.10,
+      "eval_type": "SIMPLE",
+      "metric": "ol_injuries_vs_pass_rush",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "REGLA OL VS PASS RUSH (MNFL-OL): >= 2 OLs lesionados vs Pass Rush agresivo, penalizar -0.10."
+    },
+    "AVR": {
+      "version": "1.0",
+      "priority": 1,
+      "leagues": ["NBA", "WNBA"],
+      "name": "Star Availability",
+      "category": "INJURY",
+      "severity": "CRITICAL",
+      "weight": -0.12,
+      "eval_type": "OR",
+      "conditions": [
+        {"metric": "star_player_dnp", "operator": "==", "threshold": true},
+        {"metric": "usage_rate_high_dnp", "operator": "==", "threshold": true}
+      ],
+      "prompt_description": "STAR AVAILABILITY (AVR): DNP / Descanso de estrella principal (Usage % > 28%), penalizar -0.12."
+    },
+    "MNBA-B2B": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["NBA"],
+      "name": "Regla Back-to-Back NBA",
+      "category": "CONTEXTUAL",
+      "severity": "MEDIUM",
+      "weight": -0.08,
+      "eval_type": "AND",
+      "conditions": [
+        {"metric": "b2b_game", "operator": "==", "threshold": true},
+        {"metric": "travel_distance_km", "operator": ">", "threshold": 500.0}
+      ],
+      "prompt_description": "REGLA BACK-TO-BACK (MNBA-B2B): 2° juego consecutivo con viaje > 500 km penaliza Win Prob en -0.08."
+    },
+    "TTR": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["TENIS_WTA", "TENIS_ATP"],
+      "name": "Tie-Break & Third Set Reliability",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": 0.07,
+      "eval_type": "OR",
+      "conditions": [
+        {"metric": "third_set_reliability", "operator": ">=", "threshold": 0.68},
+        {"metric": "decisive_set_high_winrate", "operator": "==", "threshold": true}
+      ],
+      "prompt_description": "TIE-BREAK & THIRD-SET RELIABILITY (TTR): Porcentaje de victoria en decisivos > 68%, sumar +0.07."
+    },
+    "IOT": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["TENIS_WTA", "TENIS_ATP"],
+      "name": "Indoor / Outdoor Transition",
+      "category": "ENVIRONMENT",
+      "severity": "MEDIUM",
+      "weight": -0.06,
+      "eval_type": "SIMPLE",
+      "metric": "surface_transition",
+      "operator": "==",
+      "threshold": true,
+      "prompt_description": "INDOOR / OUTDOOR TRANSITION (IOT): Transición rápida de superficie/condición, penalizar -0.06."
+    },
+    "DFV": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["TENIS_WTA"],
+      "name": "Double Fault Vulnerability",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": -0.08,
+      "eval_type": "OR",
+      "conditions": [
+        {"metric": "double_fault_vulnerability", "operator": "==", "threshold": true},
+        {"metric": "second_serve_win_pct", "operator": "<=", "threshold": 0.40}
+      ],
+      "prompt_description": "DOUBLE FAULT VULNERABILITY (DFV): Puntos con 2do servicio < 40% o dobles faltas elevadas, reducir -0.08."
+    },
+    "RBA": {
+      "version": "1.0",
+      "priority": 2,
+      "leagues": ["TENIS_WTA"],
+      "name": "Return Break Rate Advantage",
+      "category": "QUANT_ADJUSTMENT",
+      "severity": "MEDIUM",
+      "weight": 0.09,
+      "eval_type": "OR",
+      "conditions": [
+        {"metric": "return_break_advantage", "operator": "==", "threshold": true},
+        {"metric": "break_rate_advantage_pct", "operator": ">=", "threshold": 12.0}
+      ],
+      "prompt_description": "RETURN BREAK RATE ADVANTAGE (RBA): Break Rate sobre el servicio rival supera en > 12% la media, sumar +0.09."
+    }
+  }
+}

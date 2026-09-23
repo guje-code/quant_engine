@@ -1,0 +1,19 @@
+{
+  "CLUSTERS": {
+    "BULLPEN_CLUSTER": {
+      "rules": ["BFI", "HLF", "BCA"],
+      "group_penalty_factor": 0.50,
+      "description": "Riesgo sistémico por fatiga y colapso de relevistas en béisbol."
+    },
+    "MARKET_CLUSTER": {
+      "rules": ["CLV", "FMS"],
+      "group_penalty_factor": 0.70,
+      "description": "Presión de dinero inteligente y movimientos de línea acelerados."
+    },
+    "DEFENSE_CLUSTER": {
+      "rules": ["SPP", "DBE"],
+      "group_penalty_factor": 0.60,
+      "description": "Eficiencia de bloques defensivos y posesión estéril."
+    }
+  }
+}

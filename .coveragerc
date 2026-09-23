@@ -1,0 +1,6 @@
+[run]
+source = quant_engine
+
+omit =
+    */tests/*
+    */__pycache__/*
